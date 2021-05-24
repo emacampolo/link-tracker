@@ -35,6 +35,14 @@ func (l *Link) Create() web.Handler {
 			return web.NewError(400, err.Error())
 		}
 
+		if r.Link == "" {
+			return web.NewError(400, "link is missing")
+		}
+
+		if r.Password == "" {
+			return web.NewError(400, "password is missing")
+		}
+
 		l, err := l.linkService.Create(req.Context(), r.Link, r.Password)
 		if err != nil {
 			return err

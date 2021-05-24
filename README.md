@@ -9,10 +9,19 @@ It uses minimal dependencies, implements idiomatic code and follows as much as p
 
 It also includes a makefile whose default target run the following tools:
 
-- go mod tidy
-- go fmt
-- goimports
-- go test
+- `go mod tidy`
+- `go fmt`
+- `goimports`
+- `go test`
+
+## Go installation
+
+- Download Go tools from `https://golang.org/dl`
+- If you are on a Unix-like system using bash, add the following lines to your .profile:
+    - `export GOPATH=$HOME/go`
+    - `export PATH=$PATH:$GOPATH/bin`
+
+Note: Despite being mentioned in many blog posts, there is no need to define GOROOT.
 
 ## Build locally
 After cloning the repository, execute the following command under the root directory

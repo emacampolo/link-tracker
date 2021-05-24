@@ -9,16 +9,17 @@ import (
 	"link-tracker/internal/platform/web"
 )
 
-type LinkService interface {
-	Create(url, password string) (link.Link, error)
-	Redirect(ID int, password string) (link.Link, error)
-}
-
 type Link struct {
-	LinkService LinkService
+	linkService link.Service
 }
 
-func (l *Link) CreateLink() web.Handler {
+func NewLink(l link.Service) *Link {
+	return &Link{
+		linkService: l,
+	}
+}
+
+func (l *Link) Create() web.Handler {
 	type request struct {
 		Link     string `json:"link"`
 		Password string `json:"password"`
@@ -34,7 +35,7 @@ func (l *Link) CreateLink() web.Handler {
 			return web.NewError(400, err.Error())
 		}
 
-		l, err := l.LinkService.Create(r.Link, r.Password)
+		l, err := l.linkService.Create(req.Context(), r.Link, r.Password)
 		if err != nil {
 			return err
 		}
@@ -43,11 +44,11 @@ func (l *Link) CreateLink() web.Handler {
 			ID: l.ID,
 		}
 
-		return web.Respond(req.Context(), w, resp, 200)
+		return web.Respond(req.Context(), w, resp, http.StatusCreated)
 	}
 }
 
-func (l *Link) GetLink() web.Handler {
+func (l *Link) Redirect() web.Handler {
 	return func(w http.ResponseWriter, req *http.Request) error {
 		idParam := web.Param(req, "id")
 		if idParam == "" {
@@ -64,7 +65,7 @@ func (l *Link) GetLink() web.Handler {
 			return web.NewError(400, "password is missing")
 		}
 
-		ll, err := l.LinkService.Redirect(id, password)
+		ll, err := l.linkService.Redirect(req.Context(), id, password)
 		if err != nil {
 			if errors.Is(err, link.ErrNotFound) {
 				return web.NewError(404, err.Error())

@@ -15,14 +15,14 @@ func main() {
 }
 
 func run() error {
-	linkHandler := handler.Link{
-		LinkService: link.NewService(),
-	}
+	linkRepository := link.NewInMemoryRepository()
+	linkService := link.NewService(linkRepository)
+	linkHandler := handler.NewLink(linkService)
 
 	application := web.New()
 
-	application.Method("POST", "/link", linkHandler.CreateLink())
-	application.Method("GET", "/link/{id}", linkHandler.GetLink())
+	application.Method("POST", "/link", linkHandler.Create())
+	application.Method("GET", "/link/{id}", linkHandler.Redirect())
 
 	return application.Run()
 }

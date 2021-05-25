@@ -32,15 +32,15 @@ func (lnk *Link) Create() web.Handler {
 	return func(w http.ResponseWriter, req *http.Request) error {
 		var r request
 		if err := web.Decode(req, &r); err != nil {
-			return web.NewError(400, err.Error())
+			return web.NewError(http.StatusBadRequest, err.Error())
 		}
 
 		if r.Link == "" {
-			return web.NewError(400, "link is missing")
+			return web.NewError(http.StatusBadRequest, "link is missing")
 		}
 
 		if r.Password == "" {
-			return web.NewError(400, "password is missing")
+			return web.NewError(http.StatusBadRequest, "password is missing")
 		}
 
 		l, err := lnk.linkService.Create(req.Context(), r.Link, r.Password)
@@ -58,25 +58,24 @@ func (lnk *Link) Create() web.Handler {
 
 func (lnk *Link) Redirect() web.Handler {
 	return func(w http.ResponseWriter, req *http.Request) error {
-		idParam := web.Param(req, "id")
-		if idParam == "" {
-			return web.NewError(400, "id param is missing")
-		}
-
-		id, err := strconv.Atoi(idParam)
+		id, err := lnk.extractID(req)
 		if err != nil {
-			return web.NewError(400, err.Error())
+			return web.NewError(http.StatusBadRequest, err.Error())
 		}
 
 		password := req.URL.Query().Get("password")
 		if password == "" {
-			return web.NewError(400, "password is missing")
+			return web.NewError(http.StatusBadRequest, "password is missing")
 		}
 
 		ll, err := lnk.linkService.Redirect(req.Context(), id, password)
 		if err != nil {
 			if errors.Is(err, link.ErrNotFound) {
-				return web.NewError(404, err.Error())
+				return web.NewError(http.StatusNotFound, err.Error())
+			}
+
+			if errors.Is(err, link.ErrInactive) {
+				return web.NewError(http.StatusUnprocessableEntity, err.Error())
 			}
 
 			return err
@@ -89,37 +88,64 @@ func (lnk *Link) Redirect() web.Handler {
 
 func (lnk *Link) Metrics() web.Handler {
 	type response struct {
-		ID    int    `json:"id"`
-		URL   string `json:"url"`
-		Count int    `json:"count"`
+		ID       int    `json:"id"`
+		URL      string `json:"url"`
+		Count    int    `json:"count"`
+		Inactive bool   `json:"inactive"`
 	}
 
 	return func(w http.ResponseWriter, req *http.Request) error {
-		idParam := web.Param(req, "id")
-		if idParam == "" {
-			return web.NewError(400, "id param is missing")
-		}
-
-		id, err := strconv.Atoi(idParam)
+		id, err := lnk.extractID(req)
 		if err != nil {
-			return web.NewError(400, err.Error())
+			return web.NewError(http.StatusBadRequest, err.Error())
 		}
 
 		l, err := lnk.linkService.FindByID(req.Context(), id)
 		if err != nil {
 			if errors.Is(err, link.ErrNotFound) {
-				return web.NewError(404, err.Error())
+				return web.NewError(http.StatusNotFound, err.Error())
 			}
 
 			return err
 		}
 
 		resp := response{
-			ID:    l.ID,
-			URL:   l.URL,
-			Count: l.Count,
+			ID:       l.ID,
+			URL:      l.URL,
+			Count:    l.Count,
+			Inactive: l.Inactive,
 		}
 
 		return web.Respond(req.Context(), w, resp, http.StatusOK)
 	}
+}
+
+func (lnk *Link) Inactivate() web.Handler {
+	return func(w http.ResponseWriter, req *http.Request) error {
+		id, err := lnk.extractID(req)
+		if err != nil {
+			return web.NewError(http.StatusBadRequest, err.Error())
+		}
+
+		if err := lnk.linkService.Inactivate(req.Context(), id); err != nil {
+			return nil
+		}
+
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+
+func (lnk *Link) extractID(req *http.Request) (int, error) {
+	idParam := web.Param(req, "id")
+	if idParam == "" {
+		return 0, web.NewError(http.StatusBadRequest, "id param is missing")
+	}
+
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		return 0, web.NewError(http.StatusBadRequest, err.Error())
+	}
+
+	return id, nil
 }

@@ -24,6 +24,7 @@ func run() error {
 	application.Method("POST", "/link", linkHandler.Create())
 	application.Method("GET", "/link/{id}", linkHandler.Redirect())
 	application.Method("GET", "/link/{id}/metrics", linkHandler.Metrics())
+	application.Method("POST", "/link/{id}/inactivate", linkHandler.Inactivate())
 
 	return application.Run()
 }

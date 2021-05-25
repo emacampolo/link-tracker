@@ -34,6 +34,10 @@ func (l *linkServiceMock) FindByID(ctx context.Context, ID int) (link.Link, erro
 	return args.Get(0).(link.Link), args.Error(1)
 }
 
+func (l *linkServiceMock) Inactivate(ctx context.Context, ID int) error {
+	return l.Called(ctx, ID).Error(0)
+}
+
 func TestLink_Create(t *testing.T) {
 	// Given
 	r := struct {

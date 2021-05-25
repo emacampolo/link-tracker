@@ -28,6 +28,7 @@ type Link struct {
 type Service interface {
 	Create(ctx context.Context, url, password string) (Link, error)
 	Redirect(ctx context.Context, ID int, password string) (Link, error)
+	FindByID(ctx context.Context, ID int) (Link, error)
 }
 
 // Repository encapsulates the storage of a Link.
@@ -80,4 +81,8 @@ func (s *service) Redirect(ctx context.Context, ID int, password string) (Link, 
 	}
 
 	return link, nil
+}
+
+func (s *service) FindByID(ctx context.Context, ID int) (Link, error) {
+	return s.repository.FindByID(ctx, ID)
 }

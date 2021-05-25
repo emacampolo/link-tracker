@@ -29,6 +29,11 @@ func (l *linkServiceMock) Redirect(ctx context.Context, ID int, password string)
 	return args.Get(0).(link.Link), args.Error(1)
 }
 
+func (l *linkServiceMock) FindByID(ctx context.Context, ID int) (link.Link, error) {
+	args := l.Called(ctx, ID)
+	return args.Get(0).(link.Link), args.Error(1)
+}
+
 func TestLink_Create(t *testing.T) {
 	// Given
 	r := struct {

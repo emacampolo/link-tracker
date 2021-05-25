@@ -1,4 +1,4 @@
-module link-tracker
+module github.com/emacampolo/link-tracker
 
 go 1.16
 

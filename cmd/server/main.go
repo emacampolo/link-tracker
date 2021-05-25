@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"link-tracker/cmd/server/handler"
-	"link-tracker/internal/link"
-	"link-tracker/internal/platform/web"
+	"github.com/emacampolo/link-tracker/cmd/server/handler"
+	"github.com/emacampolo/link-tracker/internal/link"
+	"github.com/emacampolo/link-tracker/internal/platform/web"
 )
 
 func main() {

@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"link-tracker/cmd/server/handler"
-	"link-tracker/internal/link"
+	"github.com/emacampolo/link-tracker/cmd/server/handler"
+	"github.com/emacampolo/link-tracker/internal/link"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

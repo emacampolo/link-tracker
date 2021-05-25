@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"text/tabwriter"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -46,6 +47,46 @@ func (app *Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Run is called to start the web service.
 func (app *Application) Run() error {
+	if err := app.printRoutes(); err != nil {
+		return err
+	}
+
+	return app.listenAndServe()
+}
+
+func (app *Application) printRoutes() error {
+	var routes []struct {
+		Method string
+		Route  string
+	}
+
+	walkFunc := func(m string, r string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		routes = append(routes, struct {
+			Method string
+			Route  string
+		}{
+			Method: m,
+			Route:  r,
+		})
+		return nil
+	}
+
+	if err := chi.Walk(app.mux, walkFunc); err != nil {
+		return err
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+
+	for _, r := range routes {
+		if _, err := fmt.Fprintf(w, "%s\t%s\n", r.Method, r.Route); err != nil {
+			return err
+		}
+	}
+
+	return w.Flush()
+}
+
+func (app *Application) listenAndServe() error {
 	server := http.Server{
 		Addr:    ":8080",
 		Handler: app,
@@ -57,7 +98,7 @@ func (app *Application) Run() error {
 
 	// Start the service listening for requests.
 	go func() {
-		log.Printf("main : API listening on %s", server.Addr)
+		log.Printf("API listening on %s", server.Addr)
 		serverErrors <- server.ListenAndServe()
 	}()
 

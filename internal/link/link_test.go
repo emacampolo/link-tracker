@@ -15,8 +15,9 @@ type repositoryMock struct {
 	mock.Mock
 }
 
-func (r *repositoryMock) Save(ctx context.Context, l link.Link) int {
-	return r.Mock.Called(ctx, l).Int(0)
+func (r *repositoryMock) Save(ctx context.Context, l link.Link) (int, error) {
+	args := r.Mock.Called(ctx, l)
+	return args.Int(0), args.Error(1)
 }
 
 func (r *repositoryMock) Update(ctx context.Context, l link.Link) error {
@@ -37,7 +38,7 @@ func TestService_Create(t *testing.T) {
 	repositoryMock := &repositoryMock{}
 	repositoryMock.On("Save", ctx, mock.MatchedBy(func(l link.Link) bool {
 		return l.URL == url && l.Password != nil
-	})).Return(1)
+	})).Return(1, nil)
 
 	service := link.NewService(repositoryMock)
 

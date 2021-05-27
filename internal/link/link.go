@@ -38,7 +38,7 @@ type Service interface {
 
 // Repository encapsulates the storage of a Link.
 type Repository interface {
-	Save(ctx context.Context, l Link) int
+	Save(ctx context.Context, l Link) (int, error)
 	Update(ctx context.Context, l Link) error
 	FindByID(ctx context.Context, ID int) (Link, error)
 }
@@ -64,9 +64,12 @@ func (s *service) Create(ctx context.Context, url, password string) (Link, error
 		URL:      url,
 	}
 
-	id := s.repository.Save(ctx, l)
-	l.ID = id
+	id, err := s.repository.Save(ctx, l)
+	if err != nil {
+		return Link{}, err
+	}
 
+	l.ID = id
 	return l, nil
 }
 

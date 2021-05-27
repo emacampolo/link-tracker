@@ -2,7 +2,6 @@ package link
 
 import (
 	"context"
-	"errors"
 )
 
 type InMemoryRepository struct {
@@ -16,18 +15,19 @@ func NewInMemoryRepository() *InMemoryRepository {
 }
 
 func (r *InMemoryRepository) Update(ctx context.Context, l Link) error {
-	if l.ID == 0 {
-		return errors.New("invalid link ID")
+	_, ok := r.m[l.ID]
+	if !ok {
+		return ErrNotFound
 	}
 
 	r.m[l.ID] = l
 	return nil
 }
 
-func (r *InMemoryRepository) Save(ctx context.Context, l Link) int {
+func (r *InMemoryRepository) Save(ctx context.Context, l Link) (int, error) {
 	l.ID = len(r.m) + 1
 	r.m[l.ID] = l
-	return l.ID
+	return l.ID, nil
 }
 
 func (r *InMemoryRepository) FindByID(ctx context.Context, ID int) (Link, error) {

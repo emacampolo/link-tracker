@@ -128,7 +128,7 @@ func (lnk *Link) Inactivate() web.Handler {
 		}
 
 		if err := lnk.linkService.Inactivate(req.Context(), id); err != nil {
-			return nil
+			return err
 		}
 
 		w.WriteHeader(http.StatusOK)

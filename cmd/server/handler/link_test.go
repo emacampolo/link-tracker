@@ -10,6 +10,7 @@ import (
 
 	"github.com/emacampolo/link-tracker/cmd/server/handler"
 	"github.com/emacampolo/link-tracker/internal/link"
+	"github.com/gin-gonic/gin"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -56,10 +57,12 @@ func TestLink_Create(t *testing.T) {
 	svcMock := &linkServiceMock{}
 	svcMock.On("Create", req.Context(), r.Link, r.Password).Return(l, nil)
 
+	c, _ := gin.CreateTestContext(rr)
+	c.Request = req
 	linkHandler := handler.NewLink(svcMock)
 
 	// When
-	linkHandler.Create().ServeHTTP(rr, req)
+	linkHandler.Create(c)
 
 	// Then
 	require.Equal(t, http.StatusCreated, rr.Code)
@@ -80,12 +83,12 @@ func TestLink_Create_RequiredFields(t *testing.T) {
 		{
 			name:    "link is required",
 			req:     request{Password: "1234"},
-			wantErr: `{"code":"bad_request","message":"link is missing"}`,
+			wantErr: `{"error":"link is missing"}`,
 		},
 		{
 			name:    "password is required",
 			req:     request{Link: "https://www.google.com"},
-			wantErr: `{"code":"bad_request","message":"password is missing"}`,
+			wantErr: `{"error":"password is missing"}`,
 		},
 	}
 
@@ -100,10 +103,12 @@ func TestLink_Create_RequiredFields(t *testing.T) {
 			svcMock := &linkServiceMock{}
 			svcMock.On("Create", req.Context(), tc.req.Link, tc.req.Password).Return(l, nil)
 
+			c, _ := gin.CreateTestContext(rr)
+			c.Request = req
 			linkHandler := handler.NewLink(svcMock)
 
 			// When
-			linkHandler.Create().ServeHTTP(rr, req)
+			linkHandler.Create(c)
 
 			// Then
 			require.Equal(t, http.StatusBadRequest, rr.Code)
@@ -127,10 +132,12 @@ func TestLink_Create_RequiredFields(t *testing.T) {
 	svcMock := &linkServiceMock{}
 	svcMock.On("Create", req.Context(), r.Link, r.Password).Return(l, nil)
 
+	c, _ := gin.CreateTestContext(rr)
+	c.Request = req
 	linkHandler := handler.NewLink(svcMock)
 
 	// When
-	linkHandler.Create().ServeHTTP(rr, req)
+	linkHandler.Create(c)
 
 	// Then
 	require.Equal(t, http.StatusCreated, rr.Code)

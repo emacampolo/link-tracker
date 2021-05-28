@@ -5,7 +5,7 @@ import (
 
 	"github.com/emacampolo/link-tracker/cmd/server/handler"
 	"github.com/emacampolo/link-tracker/internal/link"
-	"github.com/emacampolo/link-tracker/internal/platform/web"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -19,12 +19,11 @@ func run() error {
 	linkService := link.NewService(linkRepository)
 	linkHandler := handler.NewLink(linkService)
 
-	application := web.New()
+	engine := gin.Default()
+	engine.POST("/link", linkHandler.Create)
+	engine.GET("/link/{id}", linkHandler.Redirect)
+	engine.GET("/link/{id}/metrics", linkHandler.Metrics)
+	engine.POST("/link/{id}/inactivate", linkHandler.Inactivate)
 
-	application.Method("POST", "/link", linkHandler.Create())
-	application.Method("GET", "/link/{id}", linkHandler.Redirect())
-	application.Method("GET", "/link/{id}/metrics", linkHandler.Metrics())
-	application.Method("POST", "/link/{id}/inactivate", linkHandler.Inactivate())
-
-	return application.Run()
+	return engine.Run()
 }

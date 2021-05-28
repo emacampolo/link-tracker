@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/emacampolo/link-tracker/internal/link"
-	"github.com/emacampolo/link-tracker/internal/platform/web"
+	"github.com/gin-gonic/gin"
 )
 
 type Link struct {
@@ -19,7 +19,7 @@ func NewLink(l link.Service) *Link {
 	}
 }
 
-func (lnk *Link) Create() web.Handler {
+func (lnk *Link) Create(c *gin.Context) {
 	type request struct {
 		Link     string `json:"link"`
 		Password string `json:"password"`
@@ -29,64 +29,68 @@ func (lnk *Link) Create() web.Handler {
 		ID int `json:"id"`
 	}
 
-	return func(w http.ResponseWriter, req *http.Request) error {
-		var r request
-		if err := web.Decode(req, &r); err != nil {
-			return web.NewError(http.StatusBadRequest, err.Error())
-		}
+	var r request
 
-		if r.Link == "" {
-			return web.NewError(http.StatusBadRequest, "link is missing")
-		}
-
-		if r.Password == "" {
-			return web.NewError(http.StatusBadRequest, "password is missing")
-		}
-
-		l, err := lnk.linkService.Create(req.Context(), r.Link, r.Password)
-		if err != nil {
-			return err
-		}
-
-		resp := response{
-			ID: l.ID,
-		}
-
-		return web.Respond(req.Context(), w, resp, http.StatusCreated)
+	if err := c.BindJSON(&r); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
+
+	if r.Link == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "link is missing"})
+		return
+	}
+
+	if r.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password is missing"})
+		return
+	}
+
+	l, err := lnk.linkService.Create(c.Request.Context(), r.Link, r.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp := response{
+		ID: l.ID,
+	}
+
+	c.JSON(http.StatusCreated, resp)
 }
 
-func (lnk *Link) Redirect() web.Handler {
-	return func(w http.ResponseWriter, req *http.Request) error {
-		id, err := lnk.extractID(req)
-		if err != nil {
-			return web.NewError(http.StatusBadRequest, err.Error())
-		}
-
-		password := req.URL.Query().Get("password")
-		if password == "" {
-			return web.NewError(http.StatusBadRequest, "password is missing")
-		}
-
-		ll, err := lnk.linkService.Redirect(req.Context(), id, password)
-		if err != nil {
-			if errors.Is(err, link.ErrNotFound) {
-				return web.NewError(http.StatusNotFound, err.Error())
-			}
-
-			if errors.Is(err, link.ErrInactive) {
-				return web.NewError(http.StatusUnprocessableEntity, err.Error())
-			}
-
-			return err
-		}
-
-		http.Redirect(w, req, ll.URL, http.StatusMovedPermanently)
-		return nil
+func (lnk *Link) Redirect(c *gin.Context) {
+	id, err := lnk.extractID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
+
+	password := c.Query("password")
+	if password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password is missing"})
+		return
+	}
+
+	ll, err := lnk.linkService.Redirect(c.Request.Context(), id, password)
+	if err != nil {
+		if errors.Is(err, link.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		if errors.Is(err, link.ErrInactive) {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Redirect(http.StatusMovedPermanently, ll.URL)
 }
 
-func (lnk *Link) Metrics() web.Handler {
+func (lnk *Link) Metrics(c *gin.Context) {
 	type response struct {
 		ID       int    `json:"id"`
 		URL      string `json:"url"`
@@ -94,58 +98,53 @@ func (lnk *Link) Metrics() web.Handler {
 		Inactive bool   `json:"inactive"`
 	}
 
-	return func(w http.ResponseWriter, req *http.Request) error {
-		id, err := lnk.extractID(req)
-		if err != nil {
-			return web.NewError(http.StatusBadRequest, err.Error())
-		}
-
-		l, err := lnk.linkService.FindByID(req.Context(), id)
-		if err != nil {
-			if errors.Is(err, link.ErrNotFound) {
-				return web.NewError(http.StatusNotFound, err.Error())
-			}
-
-			return err
-		}
-
-		resp := response{
-			ID:       l.ID,
-			URL:      l.URL,
-			Count:    l.Count,
-			Inactive: l.Inactive,
-		}
-
-		return web.Respond(req.Context(), w, resp, http.StatusOK)
-	}
-}
-
-func (lnk *Link) Inactivate() web.Handler {
-	return func(w http.ResponseWriter, req *http.Request) error {
-		id, err := lnk.extractID(req)
-		if err != nil {
-			return web.NewError(http.StatusBadRequest, err.Error())
-		}
-
-		if err := lnk.linkService.Inactivate(req.Context(), id); err != nil {
-			return nil
-		}
-
-		w.WriteHeader(http.StatusOK)
-		return nil
-	}
-}
-
-func (lnk *Link) extractID(req *http.Request) (int, error) {
-	idParam := web.Param(req, "id")
-	if idParam == "" {
-		return 0, web.NewError(http.StatusBadRequest, "id param is missing")
-	}
-
-	id, err := strconv.Atoi(idParam)
+	id, err := lnk.extractID(c)
 	if err != nil {
-		return 0, web.NewError(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
-	return id, nil
+	l, err := lnk.linkService.FindByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, link.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp := response{
+		ID:       l.ID,
+		URL:      l.URL,
+		Count:    l.Count,
+		Inactive: l.Inactive,
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+func (lnk *Link) Inactivate(c *gin.Context) {
+	id, err := lnk.extractID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := lnk.linkService.Inactivate(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (lnk *Link) extractID(c *gin.Context) (int, error) {
+	idParam := c.Param("id")
+	if idParam == "" {
+		return 0, errors.New("id param is missing")
+	}
+
+	return strconv.Atoi(idParam)
 }

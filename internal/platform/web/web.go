@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"syscall"
 	"text/tabwriter"
 	"time"
@@ -75,11 +76,24 @@ func (app *Application) printRoutes() error {
 		return err
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+	var w tabwriter.Writer
+	w.Init(os.Stdout, 0, 0, 1, ' ', tabwriter.TabIndent)
 
-	for _, r := range routes {
-		if _, err := fmt.Fprintf(w, "%s\t%s\n", r.Method, r.Route); err != nil {
-			return err
+	m := make(map[string][]string)
+	var r []string
+	for _, route := range routes {
+		r = append(r, route.Route)
+		m[route.Route] = append(m[route.Route], route.Method)
+	}
+
+	visited := make(map[string]struct{})
+	sort.Strings(r)
+
+	for _, v := range r {
+		if _, ok := visited[v]; !ok {
+			sort.Strings(m[v])
+			fmt.Fprintf(&w, "%s\t%v\t\n", v, m[v])
+			visited[v] = struct{}{}
 		}
 	}
 

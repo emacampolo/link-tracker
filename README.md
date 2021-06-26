@@ -31,11 +31,16 @@ After cloning the repository, execute the following command under the root direc
 make run
 ```
 
+> The main branch does not use any framework. It relies on simple primitives built on top of the standard library.
+> [Here](https://github.com/emacampolo/link-tracker/tree/feature/gin-implementation) you will find the same program
+> using the gin framework.
+> It is worth noting that despite changing the entire transport implementation, the domain layer remains intact.
+
 ## Business Problem
 
-This project provides a web service for creating and redirecting URLs upon password validation. It also tracks how
-many times a URL is visited with a simple counter. As implementation note, the service is not thread safe, and the
-repository is volatile, meaning that the default implementation stores the data in memory.
+This project provides a web service for creating and redirecting URLs upon password validation. It also tracks how many
+times a URL is visited with a simple counter. As implementation note, the service is not thread safe, and the repository
+is volatile, meaning that the default implementation stores the data in memory.
 
 ## Create a link
 

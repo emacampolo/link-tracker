@@ -50,3 +50,11 @@ is volatile, meaning that the default implementation stores the data in memory.
 
 You can either use cURL and follow the redirection with -L or opening a browser and navigate to the link. For a link
 with id 1 please visit: http://localhost:8080/link/1?password=123
+
+## Acknowledgement
+
+All the content in this repository is heavily inspired by the amazing work done by Bill Kennedy
+from [ArdanLabs](https://www.ardanlabs.com/).
+
+I strongly recommend taking any of his courses and check many useful links and open-source material in
+his [repository](https://github.com/ardanlabs/).
